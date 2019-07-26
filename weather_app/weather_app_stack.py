@@ -1,3 +1,4 @@
+import os
 from aws_cdk import core
 from aws_cdk.aws_appsync import (
     CfnGraphQLApi, CfnApiKey, CfnGraphQLSchema, CfnDataSource, CfnResolver
@@ -8,6 +9,12 @@ from aws_cdk.aws_dynamodb import (
 from aws_cdk.aws_iam import (
     Role, ServicePrincipal, ManagedPolicy
 )
+from aws_cdk.aws_lambda import (
+    Function, Code, Runtime
+)
+from dotenv import load_dotenv
+dotenv_path = os.path.join(os.getcwd(), '.envvar')
+load_dotenv(dotenv_path)
 
 
 class WeatherAppStack(core.Stack):
@@ -53,6 +60,7 @@ class WeatherAppStack(core.Stack):
                 }
                         
                 type Query {
+                    getWeather: Weather
                     # Get a single value of type 'Post' by primary key.
                     getDestination(id: ID!, zip: String): Destination
                     getAllDestinations: [Destination]
@@ -115,4 +123,54 @@ class WeatherAppStack(core.Stack):
             ),
             service_role_arn=table_role.role_arn
         )
+
+        lambdaFn = Function(
+            self,
+            "GetWeather",
+            code=Code.asset(os.getcwd() + "/lambdas/weather/"),
+            handler="weather.get",
+            timeout=core.Duration.seconds(300),
+            runtime=Runtime.PYTHON_3_7,
+            environment={
+                'APPID': os.getenv('APPID')
+            }
+        )
+
+        lambda_role = Role(
+            self,
+            'WeatherLambdaRole',
+            assumed_by=ServicePrincipal('appsync.amazonaws.com')
+        )
+
+        lambda_role.add_managed_policy(
+            ManagedPolicy.from_aws_managed_policy_name('AWSLambdaFullAccess')
+        )
+
+        lambda_source = CfnDataSource(
+            self,
+            'WeatherDataSource',
+            api_id=graphql_api.attr_api_id,
+            name='WeatherCondition',
+            type='AWS_LAMBDA',
+            lambda_config=CfnDataSource.LambdaConfigProperty(
+                lambda_function_arn=lambdaFn.function_arn
+            ),
+            service_role_arn=lambda_role.role_arn
+        )
+
+        delete_resolver = CfnResolver(
+            self,
+            'GetWeatherResolver',
+            api_id=graphql_api.attr_api_id,
+            type_name='Query',
+            field_name='getWeather',
+            data_source_name=lambda_source.name,
+            request_mapping_template="""{
+                "version" : "2017-02-28",
+                "operation": "Invoke",
+                "payload": $util.toJson($context.arguments)
+            }""",
+            response_mapping_template="$util.toJson($context.result)"
+        )
+        delete_resolver.add_depends_on(api_schema)
 
