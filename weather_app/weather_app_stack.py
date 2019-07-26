@@ -103,4 +103,16 @@ class WeatherAppStack(core.Stack):
             ManagedPolicy.from_aws_managed_policy_name('AmazonDynamoDBFullAccess')
         )
 
+        data_source = CfnDataSource(
+            self,
+            'DestinationsDataSource',
+            api_id=graphql_api.attr_api_id,
+            name='DestinationsDynamoDataSource',
+            type='AMAZON_DYNAMODB',
+            dynamo_db_config=CfnDataSource.DynamoDBConfigProperty(
+                table_name=table.table_name,
+                aws_region=self.region
+            ),
+            service_role_arn=table_role.role_arn
+        )
 
