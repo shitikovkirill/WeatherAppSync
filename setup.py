@@ -20,6 +20,9 @@ setuptools.setup(
 
     install_requires=[
         "aws-cdk.core",
+        "aws-cdk.aws-appsync",
+        "aws-cdk.aws-dynamodb",
+        "aws-cdk.aws-iam",
     ],
 
     python_requires=">=3.6",
