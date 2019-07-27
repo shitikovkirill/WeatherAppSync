@@ -13,6 +13,7 @@ from aws_cdk.aws_lambda import (
     Function, Code, Runtime
 )
 from dotenv import load_dotenv
+
 dotenv_path = os.path.join(os.getcwd(), '.envvar')
 load_dotenv(dotenv_path)
 
@@ -184,6 +185,25 @@ class WeatherAppStack(core.Stack):
         )
         get_dest_resolver.add_depends_on(api_schema)
 
+        add_dest_resolver = CfnResolver(
+            self,
+            'AddDestinationResolver',
+            api_id=graphql_api.attr_api_id,
+            type_name='Mutation',
+            field_name='addDestination',
+            data_source_name=data_source.name,
+            request_mapping_template="""{
+                "version" : "2017-02-28",
+                "operation" : "PutItem",
+                "key" : {
+                    "id": $util.dynamodb.toDynamoDBJson($util.autoId()),
+                },
+                "attributeValues" : $util.dynamodb.toMapValuesJson($ctx.args)
+            }""",
+            response_mapping_template="$util.toJson($ctx.result)"
+        )
+        add_dest_resolver.add_depends_on(api_schema)
+
         lambdaFn = Function(
             self,
             "GetWeather",
@@ -252,4 +272,3 @@ class WeatherAppStack(core.Stack):
             response_mapping_template="$util.toJson($context.result)"
         )
         weather_resolver.add_depends_on(api_schema)
-
