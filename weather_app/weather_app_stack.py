@@ -60,7 +60,7 @@ class WeatherAppStack(core.Stack):
                 }
                         
                 type Query {
-                    getWeather: Weather
+                    getWeather(city: String!): Weather
                     # Get a single value of type 'Post' by primary key.
                     getDestination(id: ID!, zip: String): Destination
                     getAllDestinations: [Destination]
@@ -124,13 +124,30 @@ class WeatherAppStack(core.Stack):
             service_role_arn=table_role.role_arn
         )
 
+        get_all_dest_resolver = CfnResolver(
+            self,
+            'GetAllDestinationsResolver',
+            api_id=graphql_api.attr_api_id,
+            type_name='Query',
+            field_name='getAllDestinations',
+            data_source_name=data_source.name,
+            request_mapping_template="""{
+                "version": "2017-02-28",
+                "operation": "Scan",
+               
+            }""",
+            response_mapping_template="$util.toJson($ctx.result.items)"
+        )
+        get_all_dest_resolver.add_depends_on(api_schema)
+
         lambdaFn = Function(
             self,
             "GetWeather",
             code=Code.asset(os.getcwd() + "/lambdas/weather/"),
             handler="weather.get",
-            timeout=core.Duration.seconds(300),
-            runtime=Runtime.PYTHON_3_7,
+            timeout=core.Duration.seconds(900),
+            memory_size=128,
+            runtime=Runtime.NODEJS_6_10,
             environment={
                 'APPID': os.getenv('APPID')
             }
@@ -158,7 +175,7 @@ class WeatherAppStack(core.Stack):
             service_role_arn=lambda_role.role_arn
         )
 
-        delete_resolver = CfnResolver(
+        get_weather_resolver = CfnResolver(
             self,
             'GetWeatherResolver',
             api_id=graphql_api.attr_api_id,
@@ -172,5 +189,21 @@ class WeatherAppStack(core.Stack):
             }""",
             response_mapping_template="$util.toJson($context.result)"
         )
-        delete_resolver.add_depends_on(api_schema)
+        get_weather_resolver.add_depends_on(api_schema)
+
+        weather_resolver = CfnResolver(
+            self,
+            'ConditionsResolver',
+            api_id=graphql_api.attr_api_id,
+            type_name='Destination',
+            field_name='conditions',
+            data_source_name=lambda_source.name,
+            request_mapping_template="""{
+                "version" : "2017-02-28",
+                "operation": "Invoke",
+                "payload": $util.toJson($context.source)
+            }""",
+            response_mapping_template="$util.toJson($context.result)"
+        )
+        weather_resolver.add_depends_on(api_schema)
 
