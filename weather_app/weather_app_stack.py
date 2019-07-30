@@ -125,85 +125,6 @@ class WeatherAppStack(core.Stack):
             service_role_arn=table_role.role_arn
         )
 
-        get_all_dest_resolver = CfnResolver(
-            self,
-            'GetAllDestinationsResolver',
-            api_id=graphql_api.attr_api_id,
-            type_name='Query',
-            field_name='getAllDestinations',
-            data_source_name=data_source.name,
-            request_mapping_template="""{
-                "version": "2017-02-28",
-                "operation": "Scan",
-               
-            }""",
-            response_mapping_template="$util.toJson($ctx.result.items)"
-        )
-        get_all_dest_resolver.add_depends_on(api_schema)
-
-        get_by_state_dest_resolver = CfnResolver(
-            self,
-            'GetDestinationsByStateResolver',
-            api_id=graphql_api.attr_api_id,
-            type_name='Query',
-            field_name='getDestinationsByState',
-            data_source_name=data_source.name,
-            request_mapping_template="""{
-                "version": "2017-02-28",
-                "operation": "Query",
-                "query": {
-                    "expression": "#state = :state",
-                    "expressionNames": {
-                        "#state": "state",
-                    },
-                    "expressionValues": {
-                        ":state": {
-                            "S": "$util.dynamodb.toDynamoDBJson($ctx.args.state)",
-                        }
-                    }
-                }
-            }""",
-            response_mapping_template="$util.toJson($ctx.result.items)"
-        )
-        get_by_state_dest_resolver.add_depends_on(api_schema)
-
-        get_dest_resolver = CfnResolver(
-            self,
-            'GetDestinationResolver',
-            api_id=graphql_api.attr_api_id,
-            type_name='Query',
-            field_name='getDestination',
-            data_source_name=data_source.name,
-            request_mapping_template="""{
-                "version": "2017-02-28",
-                "operation": "GetItem",
-                "key": {
-                    "id": $util.dynamodb.toDynamoDBJson($ctx.args.id)
-                }
-            }""",
-            response_mapping_template="$util.toJson($ctx.result)"
-        )
-        get_dest_resolver.add_depends_on(api_schema)
-
-        add_dest_resolver = CfnResolver(
-            self,
-            'AddDestinationResolver',
-            api_id=graphql_api.attr_api_id,
-            type_name='Mutation',
-            field_name='addDestination',
-            data_source_name=data_source.name,
-            request_mapping_template="""{
-                "version" : "2017-02-28",
-                "operation" : "PutItem",
-                "key" : {
-                    "id": $util.dynamodb.toDynamoDBJson($util.autoId()),
-                },
-                "attributeValues" : $util.dynamodb.toMapValuesJson($ctx.args)
-            }""",
-            response_mapping_template="$util.toJson($ctx.result)"
-        )
-        add_dest_resolver.add_depends_on(api_schema)
-
         lambdaFn = Function(
             self,
             "GetWeather",
@@ -211,7 +132,7 @@ class WeatherAppStack(core.Stack):
             handler="weather.get",
             timeout=core.Duration.seconds(900),
             memory_size=128,
-            runtime=Runtime.NODEJS_6_10,
+            runtime=Runtime.NODEJS_10_X,
             environment={
                 'APPID': os.getenv('APPID')
             }
@@ -239,13 +160,95 @@ class WeatherAppStack(core.Stack):
             service_role_arn=lambda_role.role_arn
         )
 
+        self.add_resolvers(graphql_api, api_schema, data_source=data_source, lambda_source=lambda_source)
+
+    def add_resolvers(self, graphql_api, api_schema, **kwargs):
+        get_all_dest_resolver = CfnResolver(
+            self,
+            'GetAllDestinationsResolver',
+            api_id=graphql_api.attr_api_id,
+            type_name='Query',
+            field_name='getAllDestinations',
+            data_source_name=kwargs['data_source'].name,
+            request_mapping_template="""{
+                "version": "2017-02-28",
+                "operation": "Scan",
+
+            }""",
+            response_mapping_template="$util.toJson($ctx.result.items)"
+        )
+        get_all_dest_resolver.add_depends_on(api_schema)
+
+        get_by_state_dest_resolver = CfnResolver(
+            self,
+            'GetDestinationsByStateResolver',
+            api_id=graphql_api.attr_api_id,
+            type_name='Query',
+            field_name='getDestinationsByState',
+            data_source_name=kwargs['data_source'].name,
+            request_mapping_template="""{
+                "version": "2017-02-28",
+                "operation": "Query",
+                "query": {
+                    "expression": "#state = :state",
+                    "expressionNames": {
+                        "#state": "state",
+                    },
+                    "expressionValues": {
+                        ":state": {
+                            "S": "$util.dynamodb.toDynamoDBJson($ctx.args.state)",
+                        }
+                    }
+                }
+            }""",
+            response_mapping_template="$util.toJson($ctx.result.items)"
+        )
+        get_by_state_dest_resolver.add_depends_on(api_schema)
+
+        get_dest_resolver = CfnResolver(
+            self,
+            'GetDestinationResolver',
+            api_id=graphql_api.attr_api_id,
+            type_name='Query',
+            field_name='getDestination',
+            data_source_name=kwargs['data_source'].name,
+            request_mapping_template="""{
+                "version": "2017-02-28",
+                "operation": "GetItem",
+                "key": {
+                    "id": $util.dynamodb.toDynamoDBJson($ctx.args.id)
+                }
+            }""",
+            response_mapping_template="$util.toJson($ctx.result)"
+        )
+        get_dest_resolver.add_depends_on(api_schema)
+
+        add_dest_resolver = CfnResolver(
+            self,
+            'AddDestinationResolver',
+            api_id=graphql_api.attr_api_id,
+            type_name='Mutation',
+            field_name='addDestination',
+            data_source_name=kwargs['data_source'].name,
+            request_mapping_template="""{
+                "version" : "2017-02-28",
+                "operation" : "PutItem",
+                "key" : {
+                    "id": $util.dynamodb.toDynamoDBJson($util.autoId()),
+                },
+                "attributeValues" : $util.dynamodb.toMapValuesJson($ctx.args)
+            }""",
+            response_mapping_template="$util.toJson($ctx.result)"
+        )
+        add_dest_resolver.add_depends_on(api_schema)
+
         get_weather_resolver = CfnResolver(
             self,
             'GetWeatherResolver',
             api_id=graphql_api.attr_api_id,
             type_name='Query',
             field_name='getWeather',
-            data_source_name=lambda_source.name,
+            data_source_name=kwargs['lambda_source'].name,
             request_mapping_template="""{
                 "version" : "2017-02-28",
                 "operation": "Invoke",
@@ -261,7 +264,7 @@ class WeatherAppStack(core.Stack):
             api_id=graphql_api.attr_api_id,
             type_name='Destination',
             field_name='conditions',
-            data_source_name=lambda_source.name,
+            data_source_name=kwargs['lambda_source'].name,
             request_mapping_template="""{
                 "version" : "2017-02-28",
                 "operation": "Invoke",
