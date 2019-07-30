@@ -1,4 +1,22 @@
 
+# Install
+
+```
+git clone https://github.com/shitikovkirill/WeatherAppSync.git
+
+cd WeatherAppSync/
+
+virtualenv .env -p python3
+
+source .env/bin/activate
+
+pip install -r requirements.txt
+
+npm install -g aws-cdk
+
+
+```
+
 # Welcome to your CDK Python project!
 
 This is a blank project for Python development with CDK.
