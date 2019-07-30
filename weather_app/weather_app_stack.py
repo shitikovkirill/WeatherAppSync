@@ -14,7 +14,7 @@ from aws_cdk.aws_lambda import (
 )
 from dotenv import load_dotenv
 
-dotenv_path = os.path.join(os.getcwd(), '.envvar')
+dotenv_path = os.path.join(os.getcwd(), '.env')
 load_dotenv(dotenv_path)
 
 
