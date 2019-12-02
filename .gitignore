@@ -2,3 +2,4 @@
 .envvar
 cdk.out
 */*.egg-info
+.aws
