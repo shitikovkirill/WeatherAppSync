@@ -178,6 +178,7 @@ class WeatherAppStack(core.Stack):
             response_mapping_template="$util.toJson($ctx.result.items)"
         )
         get_all_dest_resolver.add_depends_on(api_schema)
+        get_all_dest_resolver.add_depends_on(kwargs['data_source'])
 
         get_by_state_dest_resolver = CfnResolver(
             self,
@@ -204,6 +205,7 @@ class WeatherAppStack(core.Stack):
             response_mapping_template="$util.toJson($ctx.result.items)"
         )
         get_by_state_dest_resolver.add_depends_on(api_schema)
+        get_by_state_dest_resolver.add_depends_on(kwargs['data_source'])
 
         get_dest_resolver = CfnResolver(
             self,
@@ -222,6 +224,7 @@ class WeatherAppStack(core.Stack):
             response_mapping_template="$util.toJson($ctx.result)"
         )
         get_dest_resolver.add_depends_on(api_schema)
+        get_dest_resolver.add_depends_on(kwargs['data_source'])
 
         add_dest_resolver = CfnResolver(
             self,
@@ -241,6 +244,7 @@ class WeatherAppStack(core.Stack):
             response_mapping_template="$util.toJson($ctx.result)"
         )
         add_dest_resolver.add_depends_on(api_schema)
+        add_dest_resolver.add_depends_on(kwargs['data_source'])
 
         get_weather_resolver = CfnResolver(
             self,
@@ -257,6 +261,7 @@ class WeatherAppStack(core.Stack):
             response_mapping_template="$util.toJson($context.result)"
         )
         get_weather_resolver.add_depends_on(api_schema)
+        get_weather_resolver.add_depends_on(kwargs['lambda_source'])
 
         weather_resolver = CfnResolver(
             self,
@@ -275,3 +280,4 @@ class WeatherAppStack(core.Stack):
             response_mapping_template="$util.toJson($context.result)"
         )
         weather_resolver.add_depends_on(api_schema)
+        weather_resolver.add_depends_on(kwargs['lambda_source'])
